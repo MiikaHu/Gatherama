@@ -1,0 +1,67 @@
+﻿@page "/login"
+@using Gatherama.ViewModels;
+@using Gatherama.Services;
+@inject NavigationManager NavigationManager
+@inject ApiService apiService
+@inject Gatherama.Shared.LoginState loginState
+@using Gatherama.Shared
+@using System.Net.Http
+@using System.Text.Json
+@using System.Net.Http.Json;
+@inject IJSRuntime js
+
+<h3>Login</h3>
+
+<EditForm Model="@person" OnValidSubmit="@Submit">
+    <DataAnnotationsValidator />
+    <div class="col-lg-4 col-md-12">
+        <label class="form-label" for="UserName">
+            Username:
+        </label>
+        <InputText id="UserName" class="form-control" placeholder="Enter username" @bind-Value="@person.username"/>
+        <ValidationMessage For="@(() => person.username)" />
+    </div>
+
+    <div class="col-lg-4 col-md-12">
+        <label class="form-label" for="password">
+            Password:
+        </label>
+        <InputText id="password" type="password" class="form-control" placeholder="Enter password" @bind-Value="@person.password"/>
+        <ValidationMessage For="@(() => person.password)" />
+    </div>
+    <div>
+          <p></p>
+            <button class="btn btn-primary" type="submit" @* @onclick='(Submit)' *@>Login</button>
+        
+            @*This button is just here for demo purposes. It needs to be moved later on from this EditForm. Otherwise it will trigger ValidationMessages*@
+            
+            <button class="btn btn-primary" @onclick='() => NavigationManager.NavigateTo("register")'>Register</button>
+    </div>    
+</EditForm>
+
+
+
+@code {
+
+    private PersonDto person = new PersonDto();
+
+    private async void Submit()
+    {
+        using var httpClient = new HttpClient { BaseAddress = new Uri("https://gatheramaapi.azurewebsites.net") };
+        var response = await httpClient.PostAsJsonAsync("api/Person/login", person);
+        if (response.IsSuccessStatusCode)
+        {
+
+            var userinfo = await apiService.GetUserInfoByLogin(person.username, person.password);
+
+            loginState.SetLogin(true, userinfo);
+            Console.WriteLine(loginState.isSingedin.Id);
+            Console.WriteLine("Onnistui!");
+            NavigationManager.NavigateTo("/ownspots", true);
+        }
+        else
+        {
+            await js.InvokeVoidAsync("alert", "kirjautuminen ei onnistunut, tarkista sähköposti ja salasana");
+        }
+    }
+}
